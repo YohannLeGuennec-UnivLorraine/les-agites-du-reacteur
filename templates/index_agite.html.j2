@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Outils de Simulation en Génie Chimique - ENSIC & ENSAIA</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      line-height: 1.6;
+      color: #1a3a52;
+      background-color: #f8f9fa;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+    header {
+      background: linear-gradient(135deg, #1a3a52 0%, #2d5a7b 100%);
+      color: white;
+      padding: 60px 20px;
+      text-align: center;
+      margin-bottom: 40px;
+    }
+    header h1 {
+      font-size: 32px;
+      margin-bottom: 15px;
+      font-weight: 600;
+    }
+    .subtitle {
+      font-size: 18px;
+      margin-bottom: 20px;
+      opacity: 0.95;
+    }
+    .schools {
+      font-size: 14px;
+      opacity: 0.85;
+      margin-top: 15px;
+    }
+    .intro-section {
+      background-color: white;
+      padding: 40px;
+      border-radius: 8px;
+      margin-bottom: 40px;
+      box-shadow: 0 2px 4px rgba(26, 58, 82, 0.1);
+      border-left: 4px solid #2d5a7b;
+    }
+    .intro-section h2 {
+      font-size: 22px;
+      margin-bottom: 15px;
+      color: #1a3a52;
+    }
+    .intro-section p {
+      font-size: 16px;
+      line-height: 1.8;
+      color: #333;
+    }
+    .section-title {
+      font-size: 28px;
+      margin: 40px 0 30px;
+      text-align: center;
+      color: #1a3a52;
+      font-weight: 600;
+    }
+    .section-description {
+      text-align: center;
+      font-size: 16px;
+      color: #555;
+      margin-bottom: 30px;
+      max-width: 800px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 30px;
+      margin: 30px 0;
+    }
+    .card {
+      background-color: white;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(26, 58, 82, 0.15);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 4px 16px rgba(26, 58, 82, 0.25);
+    }
+    .card-header {
+      background-color: #2d5a7b;
+      color: white;
+      padding: 20px;
+      font-weight: 600;
+      font-size: 18px;
+    }
+    .card-body {
+      padding: 25px;
+    }
+    .card-link {
+      display: inline-block;
+      background-color: #2d5a7b;
+      color: white;
+      padding: 12px 24px;
+      text-decoration: none;
+      border-radius: 4px;
+      font-weight: 500;
+      transition: background-color 0.3s ease;
+    }
+    .card-link:hover {
+      background-color: #1a3a52;
+    }
+    footer {
+      background-color: #1a3a52;
+      color: white;
+      text-align: center;
+      padding: 40px 20px;
+      margin-top: 60px;
+    }
+    footer p {
+      margin-bottom: 15px;
+    }
+    .footer-links a {
+      color: #a8c5d8;
+      margin: 0 15px;
+      text-decoration: none;
+      transition: color 0.3s ease;
+    }
+    .footer-links a:hover {
+      color: white;
+    }
+  </style>
+</head>
+<body>
+    <header>
+      <div class="container">
+        <h1>Outils de Simulation en Génie Chimique</h1>
+        <p class="subtitle">Explorez la Puissance de la Simulation de Procédés</p>
+        <p class="schools">Une initiative collaborative d'<strong>ENSIC</strong> et d'<strong>ENSAIA</strong>, Nancy, France</p>
+      </div>
+    </header>
+
+    <main class="container">
+      <section class="intro-section">
+        <h2>Bienvenue dans la Simulation en Génie Chimique</h2>
+        <p>Cette plateforme présente les outils et applications de simulation utilisés en génie chimique. Que vous soyez un étudiant en <strong>classes préparatoires</strong> ou en programmes <strong>BUT</strong> explorant les études d'ingénierie, ces applications interactives vous aideront à découvrir comment la simulation améliore les connaissances et la résolution de problèmes en génie chimique. Découvrez par vous-même les techniques informatiques avancées enseignées à l'ENSIC et l'ENSAIA.</p>
+      </section>
+
+      {% if apps %}
+      <h2 class="section-title">Applications Interactives</h2>
+      <p class="section-description">Exécutez et explorez les simulations en temps réel. Toutes les applications sont optimisées pour l'apprentissage et l'exploration.</p>
+      <div class="cards">
+        {% for app in apps %}
+        <div class="card">
+          <div class="card-header">{{ app.display_name }}</div>
+          <div class="card-body">
+            <a href="{{ app.html_path }}" class="card-link">Ouvrir l'Application</a>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </main>
+
+    <footer>
+      <div class="container">
+        <p><strong>ENSIC & ENSAIA</strong> - Université de Lorraine, Nancy, France</p>
+        <p>Découvrez davantage sur les études de génie chimique et nos programmes d'ingénierie</p>
+        <div class="footer-links">
+          <a href="https://www.ensic.univ-lorraine.fr/" target="_blank">Site Web ENSIC</a>
+          <a href="https://www.ensaia.univ-lorraine.fr/" target="_blank">Site Web ENSAIA</a>
+        </div>
+      </div>
+    </footer>
+
+</body>
+</html>
