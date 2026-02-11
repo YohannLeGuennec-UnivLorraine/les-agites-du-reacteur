@@ -1,1 +1,1 @@
-.github/scripts/build.py
+.github/scripts/build.py --template templates/tailwind.html.j2
