@@ -1,1 +1,1 @@
-.github/scripts/build.py --template templates/index_agite.html.j2
+.github/scripts/build.py
