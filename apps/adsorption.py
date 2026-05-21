@@ -1,7 +1,7 @@
 import marimo
 
 __generated_with = "0.19.11"
-app = marimo.App()
+app = marimo.App(app_title="Adsorption", css_file="style.css")
 
 
 @app.cell
@@ -14,93 +14,42 @@ def _():
     return mo, np, plt, solve_ivp
 
 
-@app.cell
-def _():
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    # Chromatographie d’adsorption
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## 1. Objectif du modèle
+
+    Ce notebook simule la séparation de deux espèces chimiques dans une colonne
+    chromatographique. Le modèle décrit l’évolution des concentrations dans la phase
+    liquide et solide en tenant compte : de la convection dans la colonne, du transfert de masse externe (film liquide), du transfert de masse interne (diffusion dans les particules) et de l’équilibre d’adsorption compétitif
+
+    L’objectif est de prédire les **courbes d’élution** en sortie de colonne.
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## 2. Lois phénoménologiques
+
+    Cette section regroupe les lois physiques et chimiques utilisées pour repéresenter les phénomènes dans le système de chromatographie. On distingue les lois basées sur la thermodynamique et les lois basées sur les transferts de matière.
+    """)
     return
 
 
 @app.cell
 def _(mo):
-    mo.md(r"""
-    # Chromatographie d’adsorption
-
-    ## Objectif du modèle
-
-    Ce notebook simule la séparation de deux espèces chimiques dans une colonne
-    chromatographique. Le modèle décrit l’évolution des concentrations dans la phase
-    liquide et solide en tenant compte :
-
-    - de la convection dans la colonne
-    - du transfert de masse externe (film liquide)
-    - du transfert de masse interne (diffusion dans les particules)
-    - de l’équilibre d’adsorption compétitif
-
-    L’objectif est de prédire les **courbes d’élution** en sortie de colonne.
-
-    ---
-
-    ## Hypothèses de modélisation
-
-    Le modèle repose sur plusieurs hypothèses classiques en génie des procédés :
-
-    ### Colonne discrétisée en cellules de mélange
-    La colonne est représentée par **N cellules parfaitement mélangées en série**
-    (modèle tanks-in-series).
-
-    Chaque cellule contient :
-
-    - une phase liquide (bulk)
-    - une phase solide poreuse
-    - une surface d’interface liquide–solide
-
-    Cela approxime un réacteur piston avec dispersion.
-
-    ---
-
-    ### Convection axiale uniquement
-    Le transport axial est modélisé par :
-
-    - un débit volumique constant
-    - pas de diffusion axiale
-    - mélange parfait dans chaque cellule
-
-    Le flux entre cellules provient uniquement du débit.
-
-    ---
-
-    ### Résistances de transfert de masse
-
-    Deux résistances sont modélisées.
-
-    #### Transfert externe (film liquide)
-    La résistance entre phase liquide et surface du solide est modélisée par :
-
-    \[
-    \frac{C - C_s}{t_{ext}}
-    \]
-
-    où :
-
-    - \(C\) : concentration bulk
-    - \(C_s\) : concentration à la surface
-    - \(t_{ext}\) : temps caractéristique du film
-
-    ---
-
-    #### Transfert interne (diffusion dans les particules)
-    La diffusion interne est modélisée par le modèle **LDF (Linear Driving Force)** :
-
-    \[
-    \frac{dq}{dt} = \frac{q_{eq}(C_s) - q}{t_i}
-    \]
-
-    Ce modèle approxime la diffusion dans les pores par une loi linéaire plus simple.
-
-    ---
-
-    ### Équilibre d’adsorption : isotherme de Langmuir compétitive
-
-    Les espèces se disputent un nombre limité de sites d’adsorption :
+    tab_thermo = mo.md(r"""
+    Les espèces se disputent un nombre limité de sites d’adsorption selon une isotherme de Langmuir de la forme :
 
     \[
     q_i =
@@ -109,80 +58,150 @@ def _(mo):
 
     Conséquences physiques :
 
-    - saturation des sites
-    - compétition entre espèces
-    - comportement non linéaire
-    - modification de la forme des pics chromatographiques
+    - saturation des sites (lorsque $C_i \rightarrow +\infty$ alors $q_i \rightarrow q_{max,i}$)
+    - compétition entre espèces (toutes les espèces interviennent dans le terme $\sum_j K_j C_j$)
+    - comportement non linéaire (sera observé dès lors que $\sum_j K_j C_j > 1$) qui impactera la forme des pics chromatographiques (pics non symétriques)
+    """)
 
-    ---
-
-    ## Bilans de matière
-
-    Le modèle repose sur trois bilans couplés.
-
-    ### Phase liquide (bulk)
+    tab_transfert_ext = mo.md(r"""
+    La résistance entre phase liquide et surface du solide est modélisée par :
 
     \[
-    \varepsilon V \frac{dC}{dt}
+    \varphi_{liq \rightarrow surf.} = \frac{C_s - C}{t_{ext}}
+    \]
+
+    où :
+
+    - \(C\) : concentration bulk
+    - \(C_s\) : concentration à la surface
+    - \(t_{ext}\) : temps caractéristique du film
+    """)
+
+    tab_transfert_int = mo.md(r"""
+    La diffusion interne est modélisée par le modèle LDF (Linear Driving Force) :
+
+    \[
+    \varphi_{surf. \rightarrow sol.} = \frac{q - q_{eq}(C_s)}{t_{int}}
+    \]
+
+    Ce modèle approxime la diffusion dans les pores par une loi linéaire plus simple.
+    """)
+
+    tabs1 = mo.ui.tabs({
+        "Thermodynamique": tab_thermo,
+        "Transfert externe": tab_transfert_ext,
+        "Transfert interne": tab_transfert_int
+    })
+
+    tabs1
+
+    return
+
+
+@app.cell
+def _(mo):
+    mo.md(r"""
+    ## 3. Bilans de matière
+
+    La colonne est représentée par N cellules parfaitement mélangées en série. Cela approxime un réacteur piston avec dispersion.
+
+    Chaque cellule contient :
+
+    - une phase liquide externe
+    - une phase solide poreuse supposée homogène
+    - une surface d’interface liquide–solide
+
+    La porosité externe $\epsilon_e$ de la colonne (ration entre le volume de liquide externe et le volume de colonne) est pris égal à 40%.
+
+    Le modèle repose sur trois bilans couplés. Chaque bilan doit être écrit pour chaque espèce $i$ dans chaque cellule de mélange $j$ (ainsi pour un système avec 30 cellules de mélange et 2 espèces, le système différentiel sera constitué de 180 équations différentielles à résoudre simultanément) :
+    """)
+    return
+
+
+@app.cell
+def _(mo):
+    tab1 = mo.md(r"""
+    Le bilan sur la phase liquide s'écrit : 
+
+    \[
+    QC_{i}^{(j-1)} = QC_{i}^{(j)} + \varphi_{i, liq \rightarrow surf.}^{(j)} \epsilon_e V + \frac{dn_i^{(j)}}{dt}
+    \]
+
+    Soit après réarrangement :
+
+    \[
+    \frac{dC_i^{(j)}}{dt}
     =
-    Q(C_{amont}-C)
-    -
-    \frac{(1-\varepsilon)V}{t_{ext}}(C-C_s)
+    \frac{Q}{\epsilon_e V^{(j)}}(C_{i}^{(j-1)}-C_{i}^{(j)})
+    +
+    \frac{C_i^{(j)}-C_{s,i}^{(j)}}{t_{i, ext}}
     \]
 
-    - convection entre cellules
-    - transfert vers le solide
+    Par définition, le temps de séjour d'une espèce ayant accès uniquement au volume de liquide externe dans la cellule de mélange $j$ s'écrit : 
 
-    ---
+    $$t_0^{(j)} = \frac{\epsilon_e V^{(j)}}{Q}$$
 
-    ### Surface du solide
+    L'équation différentielle devient alors : 
 
     \[
-    \frac{dC_s}{dt}
+    \frac{dC_i^{(j)}}{dt}
     =
-    \frac{C - C_s}{t_{ext}}
-    -
-    \frac{1-\varepsilon}{\varepsilon}\frac{dq}{dt}
+    \frac{C_{i}^{(j-1)}-C_{i}^{(j)}}{t_0^{(j)}}
+    +
+    \frac{C_i^{(j)}-C_{s,i}^{(j)}}{t_{i, ext}}
     \]
+    """)
 
-    ---
-
-    ### Phase adsorbée
+    tab2 = mo.md(r"""
+    Le bilan à l'interface s'écrit
 
     \[
-    \frac{dq}{dt} = \frac{q_{eq}(C_s) - q}{t_i}
+    \varphi_{i, liq. \rightarrow surf.}^{(j)}
+    = \varphi_{i, surf. \rightarrow sol.}^{(j)} + \frac{dC_{s,i}^{(j)}}{dt}
     \]
 
-    ---
+    Soit après réarrangement :
 
-    ## Nature numérique du problème
+    \[
+    \frac{dC_{s,i}^{(j)}}{dt} = \frac{C_{s,i}^{(j)} - C_i^{(j)}}{t_{i, ext}} - \frac{q_i^{(j)} - q_{eq,i}^{(j)}(C_s)}{t_{i, int}}
+    \]
+    """)
 
-    Le système obtenu est
+    tab3 = mo.md(r"""
+    Le bilan sur le solide s'écrit : 
 
-    - est fortement couplé
-    - contient plusieurs échelles de temps
-    - est **raide (stiff)**
+    \[
+    \frac{dn_{i,sol.}^{(j)}}{dt} = \varphi_{i, surf. \rightarrow sol.}^{(j)} (1-\epsilon_e) V^{(j)}
+    \]
 
-    La résolution utilise donc la méthode implicite **BDF**.
+    Soit après réarrangement :
 
-    ---
+    \[
+    \frac{dq_{i}^{(j)}}{dt} = \frac{q_i^{(j)} - q_{eq,i}^{(j)}(C_s)}{t_{i, int}}
+    \]
+    """)
 
-    ## Résultat simulé
+    tabs = mo.ui.tabs({
+        "Phase liquide": tab1,
+        "Interface liquide-solide": tab2,
+        "Phase solide": tab3
+    })
 
-    La simulation produit :
+    tabs
 
-    - les concentrations en sortie de colonne
-    - les pics d’élution
-    - l’influence des paramètres physico-chimiques
+    return
 
-    La largeur et la séparation des pics dépendent notamment de :
 
-    - la compétition d’adsorption
-    - les temps de transfert
-    - la porosité
-    - le débit
+@app.cell
+def _(mo):
+    mo.md(r"""
+    ## 4. Simulations
 
-    ---
+    Le système obtenu est fortement couplé, contient plusieurs échelles de temps et est raide (stiff). La résolution utilise donc la méthode implicite BDF adaptée à ce type de problème.
+
+    La simulation produit les concentrations en sortie de colonne, les pics d’élution et l’influence des paramètres physico-chimiques
+
+    La largeur et la séparation des pics dépendent notamment de la compétition d’adsorption, les temps de transfert, la porosité, le débit.
     """)
     return
 
@@ -228,28 +247,28 @@ def _(mo, n_species):
             mo.ui.text(f"Espèce {i+1}")
         )
         C_feed.append(
-            mo.ui.number(1.0)
+            mo.ui.number(i+1)
         )
         K.append(
-            mo.ui.number(2.0)
+            mo.ui.number(start=1e-3, value=10**(i+2))
         )
         q_max.append(
-            mo.ui.number(1.0)
+            mo.ui.number(start=1e-3, value=1e-2)
         )
         t_i.append(
-            mo.ui.number(1.0)
+            mo.ui.number(start=1e-3, value=1e-3)
         )
         t_ext.append(
-            mo.ui.number(1.0)
+            mo.ui.number(start=1e-3, value=1e-3)
         )
 
     species_table = mo.hstack([
         mo.vstack([mo.md("**Espèce**"), *espece]),
-        mo.vstack([mo.md("**C_feed**"), *C_feed]),
-        mo.vstack([mo.md("**K**"), *K]),
-        mo.vstack([mo.md("**q_max**"), *q_max]),
-        mo.vstack([mo.md("**t_i**"), *t_i]),
-        mo.vstack([mo.md("**t_ext**"), *t_ext]),
+        mo.vstack([mo.md("$C_{feed}(mol.L^{-1})$"), *C_feed]),
+        mo.vstack([mo.md("$K(L.mol^{-1})$"), *K]),
+        mo.vstack([mo.md("$q_{max}(mol.L^{-1})$"), *q_max]),
+        mo.vstack([mo.md("$t_{int}(min)$"), *t_i]),
+        mo.vstack([mo.md("$t_{ext}(min)$"), *t_ext]),
     ])
 
     species_table
@@ -263,12 +282,12 @@ def _(mo):
     # ==================================================
     mo.md("### 🏭 Paramètres procédé")
 
-    Q = mo.ui.number(1.0, label="Débit Q (mL/min)")
-    V_col = mo.ui.number(50.0, label="Volume colonne (mL)")
-    N = mo.ui.number(50, label="Nombre cellules")
-    eps = mo.ui.number(0.4, label="Porosité externe")
-    t_inj = mo.ui.number(2.0, label="Temps injection")
-    t_final = mo.ui.number(200.0, label="Temps final")
+    Q = mo.ui.number(start=1e-3, value=1.0, label="Débit Q (mL/min)")
+    V_col = mo.ui.number(start=1e-3, value=50.0, label="Volume colonne (mL)")
+    N = mo.ui.number(start=1, value=30, label="Nombre cellules")
+    eps = mo.ui.number(start=0.36, value=0.4, label="Porosité externe")
+    t_inj = mo.ui.number(start=0.0, value=0.1, label="Temps injection")
+    t_final = mo.ui.number(start=0.0, value=300.0, label="Temps final")
 
     process_table = mo.vstack([Q, V_col, N, eps, t_inj, t_final])
     process_table
@@ -322,7 +341,6 @@ def _(mo):
     run_button = mo.ui.run_button(label="▶️ Lancer la simulation")
 
     mo.vstack([
-        mo.md("## ▶️ Exécution"),
         run_button
     ])
     return (run_button,)

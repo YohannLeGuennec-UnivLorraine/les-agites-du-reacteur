@@ -1,12 +1,6 @@
-# /// script
-# requires-python = ">=3.12"
-# dependencies = [
-#     "marimo>=0.19.11",
-# ]
-# ///
 import marimo
 
-__generated_with = "0.19.11"
+__generated_with = "unknown"
 app = marimo.App()
 
 
@@ -362,13 +356,11 @@ def _(inverse_equilibrium):
 
         while x > xB and stages < max_stages:
 
-            # 1️⃣ Étape horizontale → équilibre
             x_eq = inverse_equilibrium(y, alpha)
 
             x_points.append(x_eq)
             y_points.append(y)
 
-            # 2️⃣ Étape verticale → droite d’exploitation
             if x_eq >= xF:
                 y_new = rectifying_line(x_eq, R, xD)
             else:
@@ -377,7 +369,6 @@ def _(inverse_equilibrium):
             x_points.append(x_eq)
             y_points.append(y_new)
 
-            # Mise à jour
             x = x_eq
             y = y_new
             stages += 1
@@ -415,6 +406,276 @@ def _(R, alpha, mccabe_thiele, np, plt, xB, xD, xF):
     plt.legend()
     plt.grid(True)
     plt.gca()
+    return (N,)
+
+
+@app.cell
+def _(N, R):
+    D = 1.0              # kmol/h
+    Hvap = 35000         # kJ/kmol
+    t_an = 8000          # h/an
+    cout_kWh = 0.05      # €/kWh
+
+    C0 = 50000           # € coût référence
+    N0 = 10              # nombre étages référence
+    amortissement = 10   # années
+
+    # Débit vapeur interne
+    V = (R.value + 1) * D
+
+    # Puissance thermique
+    Q_kJh = V * Hvap
+
+    # Conversion kW
+    Q_kW = Q_kJh / 3600
+
+    # Énergie annuelle
+    E_an = Q_kW * t_an
+
+    # Coût énergétique annuel
+    C_energy = E_an * cout_kWh
+
+    C_column = C0 * (N / N0)**0.6
+
+    # Annualisation
+    C_column_annuel = C_column / amortissement
+
+    C_total = C_energy + C_column_annuel
+    return (
+        C0,
+        C_column,
+        C_column_annuel,
+        C_energy,
+        C_total,
+        D,
+        E_an,
+        Hvap,
+        N0,
+        Q_kW,
+        V,
+        amortissement,
+        cout_kWh,
+        t_an,
+    )
+
+
+@app.cell
+def _(
+    C0,
+    C_column,
+    C_column_annuel,
+    C_energy,
+    C_total,
+    D,
+    E_an,
+    Hvap,
+    N,
+    N0,
+    Q_kW,
+    R,
+    V,
+    amortissement,
+    cout_kWh,
+    mo,
+    t_an,
+):
+    mo.md(rf"""
+    # Analyse énergétique et économique de la distillation
+
+    ---
+
+    ## 1. Nombre d’étages théoriques
+
+    La méthode de McCabe–Thiele permet de déterminer graphiquement le nombre d’étages nécessaires à la séparation.
+
+    Dans notre cas :
+
+    $$
+    N \approx {N:.1f}
+    $$
+
+    Plus le nombre d’étages est élevé :
+
+    - plus la séparation est efficace,
+    - mais plus la colonne est haute et coûteuse.
+
+    ---
+
+    ## 2. Rapport de reflux
+
+    Le reflux correspond à la fraction du distillat renvoyée dans la colonne.
+
+    $$
+    R = \frac{{L}}{{D}}
+    $$
+
+    Dans cette simulation :
+
+    $$
+    R = {R.value:.2f}
+    $$
+
+    Un reflux élevé améliore la séparation mais augmente fortement la consommation énergétique.
+
+    ---
+
+    ## 3. Débit de vapeur interne
+
+    Sous l’hypothèse des débits molaires constants :
+
+    $$
+    V = (R+1)D
+    $$
+
+    Avec :
+
+    - $D = {D:.1f} \ \mathrm{{kmol/h}}$
+    - $R = {R.value:.2f}$
+
+    on obtient :
+
+    $$
+    V = {V:.2f} \ \mathrm{{kmol/h}}
+    $$
+
+    ---
+
+    ## 4. Puissance thermique du rebouilleur
+
+    La puissance thermique nécessaire à la vaporisation vaut :
+
+    $$
+    Q_R = V \Delta H_{{vap}}
+    $$
+
+    où :
+
+    - $\Delta H_{{vap}} = {Hvap:.0f} \ \mathrm{{kJ/kmol}}$
+
+    Ainsi :
+
+    $$
+    Q_R = {Q_kW:.1f} \ \mathrm{{kW}}
+    $$
+
+    Cette puissance représente l’énergie à fournir au rebouilleur de la colonne.
+
+    ---
+
+    ## 5. Consommation énergétique annuelle
+
+    Pour un fonctionnement annuel de :
+
+    $$
+    t_{{an}} = {t_an:.0f} \ \mathrm{{h/an}}
+    $$
+
+    l’énergie consommée vaut :
+
+    $$
+    E_{{annuel}} = Q_R \times t_{{an}}
+    $$
+
+    d’où :
+
+    $$
+    E_{{annuel}} = {E_an:.0f} \ \mathrm{{kWh/an}}
+    $$
+
+    ---
+
+    ## 6. Coût énergétique annuel
+
+    En supposant un coût énergétique de :
+
+    $$
+    C_{{energie}} = {cout_kWh:.2f} \ \mathrm{{€/kWh}}
+    $$
+
+    le coût annuel de fonctionnement devient :
+
+    $$
+    C_{{op}} = {C_energy:.0f} \ \mathrm{{€/an}}
+    $$
+
+    ---
+
+    ## 7. Coût d’investissement de la colonne
+
+    Le coût d’investissement est estimé par une loi empirique :
+
+    $$
+    C_{{colonne}} =
+    C_0
+    \left(
+    \frac{{N}}{{N_0}}
+    \right)^{{0.6}}
+    $$
+
+    avec :
+
+    - $C_0 = {C0:.0f} \ \mathrm{{€}}$
+    - $N_0 = {N0:.0f}$
+
+    On obtient :
+
+    $$
+    C_{{colonne}} = {C_column:.0f} \ \mathrm{{€}}
+    $$
+
+    ---
+
+    ## 8. Annualisation du coût d’investissement
+
+    En supposant une durée d’amortissement de :
+
+    $$
+    {amortissement} \ \mathrm{{ans}}
+    $$
+
+    le coût annuel équivalent devient :
+
+    $$
+    C_{{CAPEX}} =
+    {C_column_annuel:.0f}
+    \ \mathrm{{€/an}}
+    $$
+
+    ---
+
+    ## 9. Coût total annuel
+
+    Le coût global du procédé est estimé par :
+
+    $$
+    C_{{total}} =
+    C_{{op}} + C_{{CAPEX}}
+    $$
+
+    soit :
+
+    $$
+    C_{{total}}
+    =
+    {C_total:.0f}
+    \ \mathrm{{€/an}}
+    $$
+
+    ---
+
+    # Conclusion
+
+    Cette étude montre le compromis classique du génie des procédés :
+
+    - augmenter le reflux diminue le nombre d’étages,
+    - mais augmente la consommation énergétique.
+
+    Le dimensionnement optimal d’une colonne résulte donc d’un compromis entre :
+
+    - coût énergétique,
+    - coût d’investissement,
+    - efficacité de séparation.
+    """)
     return
 
 
