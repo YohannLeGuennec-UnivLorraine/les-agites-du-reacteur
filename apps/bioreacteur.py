@@ -176,55 +176,55 @@ def _(S0, X0, YPX, k, kS, mo):
 
     def model_batch(t, X0, S0, k, kS, YPX):
         X = X0 * np.exp(k * t)
+
         # Biomasse maximale autorisée par le substrat disponible
         Xmax = X0 + (S0 * k / kS)
         X = np.minimum(X, Xmax)
 
         # Substrat limité à S >= 0
-        S = np.maximum(S0 - (kS/k)*(X - X0), 0)
+        S = np.maximum(S0 - (kS / k) * (X - X0), 0)
 
         # Produit proportionnel à la biomasse formée
         P = YPX * (X - X0)
+
         return X, S, P
 
-    # -----------------------------
-    # 3. Temps et simulation
-    # -----------------------------
     t = np.linspace(0, 20, 500)
-    X, S, P = model_batch(t, X0.value, S0.value, k.value, kS.value, YPX.value)
+    X, S, P = model_batch(
+        t,
+        X0.value,
+        S0.value,
+        k.value,
+        kS.value,
+        YPX.value,
+    )
 
-    # -----------------------------
-    # 4. Calcul des rendements finaux
-    # -----------------------------
     YXS_calc = (X[-1] - X0.value) / (S0.value - S[-1])
     YPX_calc = P[-1] / (X[-1] - X0.value) if (X[-1] - X0.value) > 0 else 0
 
-    mo.md(f"""
-    **Rendements calculés à la fin du batch :**  
-    - Y_X/S = {YXS_calc:.2f}  
-    - Y_P/X (fixé) = {YPX.value:.2f}
-    """)
-
     rendements = pd.DataFrame({
-    "Rendement": ["Y_X/S", "Y_P/X"],
-    "Valeur": [YXS_calc, YPX_calc]
+        "Rendement": ["Y_X/S", "Y_P/X"],
+        "Valeur": [YXS_calc, YPX_calc],
     })
 
-    print("Rendements finaux calculés selon les valeurs des sliders :")
-    print(rendements)
+    fig, ax = plt.subplots(figsize=(8, 5))
+    ax.plot(t, X, label="X (biomasse)")
+    ax.plot(t, S, label="S (substrat)")
+    ax.plot(t, P, label="P (produit)")
+    ax.set_xlabel("Temps")
+    ax.set_ylabel("Concentration")
+    ax.set_title("Batch avec substrat limité et rendements cohérents")
+    ax.legend()
 
-    # -----------------------------
-    # 5. Visualisation
-    # -----------------------------
-    plt.figure(figsize=(8,5))
-    plt.plot(t, X, label="X (biomasse)")
-    plt.plot(t, S, label="S (substrat)")
-    plt.plot(t, P, label="P (produit)")
-    plt.xlabel("Temps")
-    plt.ylabel("Concentration")
-    plt.title("Batch avec substrat limité et rendements cohérents")
-    plt.legend()
-    plt.show()
+    mo.vstack([
+        mo.md(f"""
+        **Rendements calculés à la fin du batch :**  
+        - Y_X/S = {YXS_calc:.2f}  
+        - Y_P/X = {YPX_calc:.2f}
+        """),
+        fig,
+        rendements,
+    ])
     return
 
 
