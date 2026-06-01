@@ -44,7 +44,6 @@ def _(mo):
 
     display(imgmonod)
 
-
     return BytesIO, Image, display, requests
 
 
@@ -120,7 +119,6 @@ def _(BytesIO, Image, display, requests):
 
     # Afficher l'image
     display(img)
-
     return
 
 
@@ -191,7 +189,7 @@ def _(mo):
 
 
 @app.cell
-def _(Ks_slider, mo, mumax_slider, s_slider):
+def _(Ks_slider, mumax_slider, s_slider):
     import numpy as np
     import matplotlib.pyplot as plt
 
@@ -222,9 +220,9 @@ def _(Ks_slider, mo, mumax_slider, s_slider):
         plt.ylim(0, 1.2)  # Plage fixe, pas dépendante de μmax
         plt.grid(True)
         plt.legend()
-        plt.show()
+        return plt.gcf()
 
-        mo.md(f"Pour [S] = {s:.2f}, µ = {mu_at_s:.3f}")
+
 
     # --- Tracer initialement ---
     plot_monod()
@@ -248,9 +246,45 @@ def _(mo):
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
-    #Partie IV - Code Python
+    # Partie IV - Code Python
 
     Le code utilisé ci-dessus pour afficher le graphique est le suivant :
+
+    ```python
+    import numpy as np
+    import matplotlib.pyplot as plt
+
+
+    def monod_curve(S, mumax, Ks):
+        return mumax * S / (Ks + S)
+
+
+    def plot_monod():
+        s = s_slider.value       # Valeur du curseur [S]
+        mumax = mumax_slider.value
+        Ks = Ks_slider.value
+
+        S = np.linspace(0, 10, 500)
+        mu = monod_curve(S, mumax, Ks)
+        mu_at_s = monod_curve(s, mumax, Ks)
+
+        plt.figure(figsize=(8,5))
+        plt.plot(S, mu, color='green', lw=2, label='μ([S])')
+        plt.axvline(s, color='blue', linestyle='--', label=f'[S]={s:.2f}')
+        plt.scatter(s, mu_at_s, color='red', zorder=5, label=f'μ={mu_at_s:.2f}')
+
+        plt.xlabel('[S] (substrat)')
+        plt.ylabel('μ (vitesse de croissance)')
+        plt.title(f'Loi de Monod : μmax={mumax}, Ks={Ks}')
+
+        plt.ylim(0, 1.2)  # Plage fixe, pas dépendante de μmax
+        plt.grid(True)
+        plt.legend()
+        return plt.gcf()
+
+
+    plot_monod()
+    ```
     """)
     return
 
