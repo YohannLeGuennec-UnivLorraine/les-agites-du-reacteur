@@ -1,7 +1,13 @@
+# /// script
+# requires-python = ">=3.12"
+# dependencies = [
+#     "marimo>=0.23.8",
+# ]
+# ///
 import marimo
 
 __generated_with = "0.19.11"
-app = marimo.App(app_title="Adsorption", css_file="style.css")
+app = marimo.App(app_title="Adsorption")
 
 
 @app.cell
