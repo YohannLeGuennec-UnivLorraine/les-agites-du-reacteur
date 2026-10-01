@@ -1,7 +1,7 @@
 # /// script
 # requires-python = ">=3.12"
 # dependencies = [
-#     "marimo>=0.23.8",
+#     "marimo==0.25.0",
 # ]
 # ///
 import marimo
@@ -36,21 +36,12 @@ def _(mo):
 
 @app.cell
 def _(mo):
-    from IPython.display import display
-    from PIL import Image
-    import requests
-    from io import BytesIO
+    mo.md(r"""
+    > **Jacques Monod (1910-1976)** est un biologiste et biochimiste français. La loi qui porte son nom relie la vitesse de croissance d'une population microbienne à la concentration du substrat limitant.
 
-
-    urlmonod = "https://img-4.linternaute.com/5fiT4_UKOe0_BUFax-_XUAdg0Pg=/1500x/smart/bd95ac84b8f540cea98907ae9a48794e/ccmcms-linternaute/18774071.jpg"
-    responsemonod = requests.get(urlmonod)
-    imgmonod = Image.open(BytesIO(responsemonod.content))
-
-    mo.image(urlmonod,width = 300)
-
-    display(imgmonod)
-
-    return BytesIO, Image, display, requests
+    Cette présentation reste disponible hors ligne : les illustrations et les calculs sont intégrés directement à l'application.
+    """)
+    return
 
 
 @app.cell(hide_code=True)
@@ -95,14 +86,12 @@ def _(mo):
 
 
 @app.cell
-def _(BytesIO, Image, display, mo, requests):
-    urlloi = "https://upload.wikimedia.org/wikipedia/commons/thumb/d/da/Monod_3.svg/500px-Monod_3.svg.png"
-    responseloi = requests.get(urlloi)
-    imgloi = Image.open(BytesIO(responseloi.content))
-
-    mo.image(urlloi,width = 300)
-
-    display(imgloi)
+def _(mo):
+    mo.image(
+        mo.notebook_location() / "public" / "monod-curve.svg",
+        width=560,
+        alt="Courbe de Monod reliant la vitesse de croissance à la concentration en substrat",
+    )
     return
 
 
@@ -115,16 +104,15 @@ def _(mo):
 
 
 @app.cell
-def _(BytesIO, Image, display, requests):
-
-    url = "https://www.meer.com/attachments/28778dfe6824d81efff6b9cf26eda629404dd66c/store/fill/330/186/39158ea0c917f14dbf773ae9339a3966c534e3791febf0a87e58a78de64f/Bacteries-Au-debut-de-sa-carriere-le-biochimiste-et-microbiologiste-Jacques-Monod-soccupe-de.jpg"
-    response = requests.get(url)
-    img = Image.open(BytesIO(response.content))
-
-
-
-    # Afficher l'image
-    display(img)
+def _(mo):
+    mo.md(r"""
+    | Micro-organisme | Exemple d'application ou de milieu |
+    |---|---|
+    | *E. coli* | Microbiologie et biotechnologies |
+    | *S. cerevisiae* | Fermentation et levures |
+    | *C. albicans* | Microbiologie médicale |
+    | Cyanobactéries | Photosynthèse et environnement |
+    """)
     return
 
 
@@ -164,7 +152,7 @@ def _(mo):
 @app.cell
 def _(mo):
     mumax_slider = mo.ui.slider(0.01, 1, step=0.01, value = 0.05)
-    mo.md(f"Vitesse de croissance maximale $\mu_{{max}}$ : {mumax_slider}")
+    mo.md(rf"Vitesse de croissance maximale $\mu_{{max}}$ : {mumax_slider}")
     return (mumax_slider,)
 
 

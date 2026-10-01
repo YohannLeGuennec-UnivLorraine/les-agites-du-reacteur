@@ -30,6 +30,11 @@ jobs:
       - name: 🚀 Install uv
         uses: astral-sh/setup-uv@v7
 
+      # Marimo's offline export observes a browser session to collect the
+      # Python runtime and every WASM-compatible package used by the notebooks.
+      - name: 🌐 Install browser for offline export
+        run: uvx --from playwright playwright install --with-deps chromium
+
       # Run the build script to export notebooks to WebAssembly
       - name: 🛠️ Export notebooks
         run: |

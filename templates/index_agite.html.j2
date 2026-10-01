@@ -3,6 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#1a3a52">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Les agités">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="static/pwa-icon-192.png">
   <title>Les agités du réacteur</title>
   <style>
     * {
@@ -203,6 +209,50 @@
       padding: 24px;
     }
 
+    .install-panel {
+      margin: 24px 0 42px;
+      padding: 24px;
+      color: #ffffff;
+      background: linear-gradient(135deg, #1a3a52 0%, #2d5a7b 100%);
+      border-radius: 4px;
+      box-shadow: 0 8px 22px rgba(26, 58, 82, 0.14);
+    }
+
+    .install-panel h2,
+    .install-panel p {
+      margin-top: 0;
+    }
+
+    .install-panel p:last-child {
+      margin-bottom: 0;
+    }
+
+    .install-action {
+      margin: 6px 0 12px;
+      padding: 10px 16px;
+      border: 0;
+      border-radius: 4px;
+      background: #ffffff;
+      color: #1a3a52;
+      font: inherit;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .install-action:hover,
+    .install-action:focus-visible {
+      background: #eef5f9;
+      outline: 3px solid rgba(255, 255, 255, 0.35);
+    }
+
+    .install-status {
+      font-weight: 700;
+    }
+
+    [hidden] {
+      display: none !important;
+    }
+
     .contact .card-link {
       margin-top: 16px;
     }
@@ -270,6 +320,14 @@
       <p>Les simulations sont pensées pour relier les équations, les phénomènes physiques et les applications concrètes enseignées à l'ENSIC. Exécutez-les en temps réel, comparez les résultats et découvrez comment les outils numériques facilitent la compréhension et la résolution de problèmes en génie des procédés.</p>
     </section>
 
+    <section class="install-panel" aria-labelledby="install-title">
+      <h2 id="install-title">Installer l’application</h2>
+      <p>Installez une fois l’application avec une connexion Internet, puis utilisez toutes les simulations sans réseau.</p>
+      <button type="button" id="pwa-install" class="install-action" hidden>Installer sur cet appareil</button>
+      <p id="pwa-ios-help" hidden>Sur iPhone ou iPad : ouvrez le menu <strong>Partager</strong>, puis choisissez <strong>Sur l’écran d’accueil</strong>.</p>
+      <p id="pwa-status" class="install-status" role="status" aria-live="polite">Préparation du mode hors ligne…</p>
+    </section>
+
     {% if app_groups %}
     <section id="apps">
       {% for group in app_groups %}
@@ -300,5 +358,70 @@
       Projet conduit par Yohann Le Guennec. Il existe grâce aux contenus proposés par les étudiants Imran Baraka, Alex Jacquey, Maxime Lin et Nitish Pierre.
     </div>
   </footer>
+  <script>
+    (() => {
+      const installButton = document.getElementById("pwa-install");
+      const iosHelp = document.getElementById("pwa-ios-help");
+      const status = document.getElementById("pwa-status");
+      let installPrompt = null;
+
+      const isStandalone = window.matchMedia("(display-mode: standalone)").matches
+        || window.navigator.standalone === true;
+      const isAppleMobile = /iphone|ipad|ipod/i.test(navigator.userAgent);
+
+      if (isStandalone) {
+        status.textContent = "Application installée. Le mode hors ligne est disponible.";
+      } else if (isAppleMobile) {
+        iosHelp.hidden = false;
+      }
+
+      window.addEventListener("beforeinstallprompt", (event) => {
+        event.preventDefault();
+        installPrompt = event;
+        installButton.hidden = false;
+      });
+
+      installButton.addEventListener("click", async () => {
+        if (!installPrompt) return;
+        await installPrompt.prompt();
+        await installPrompt.userChoice;
+        installPrompt = null;
+        installButton.hidden = true;
+      });
+
+      window.addEventListener("appinstalled", () => {
+        status.textContent = "Application installée. Le mode hors ligne est disponible.";
+        installButton.hidden = true;
+      });
+
+      if (!("serviceWorker" in navigator)) {
+        status.textContent = "Ce navigateur ne permet pas l’installation hors ligne.";
+        return;
+      }
+
+      window.addEventListener("load", async () => {
+        try {
+          const registration = await navigator.serviceWorker.register("sw.js", { scope: "./" });
+          if (registration.installing) {
+            status.textContent = "Téléchargement des simulations pour le mode hors ligne…";
+          }
+          await navigator.serviceWorker.ready;
+          status.textContent = navigator.onLine
+            ? "Prête pour une utilisation hors ligne."
+            : "Mode hors ligne actif.";
+        } catch (error) {
+          console.error("PWA registration failed", error);
+          status.textContent = "Le mode hors ligne n’a pas pu être préparé. Rechargez la page avec une connexion Internet.";
+        }
+      });
+
+      window.addEventListener("offline", () => {
+        status.textContent = "Mode hors ligne actif.";
+      });
+      window.addEventListener("online", () => {
+        status.textContent = "Connexion rétablie. Vérification des mises à jour…";
+      });
+    })();
+  </script>
 </body>
 </html>

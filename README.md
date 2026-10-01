@@ -2,6 +2,24 @@
 
 This template repository demonstrates how to export [marimo](https://marimo.io) notebooks to WebAssembly and deploy them to GitHub Pages.
 
+The generated site is also an installable Progressive Web App (PWA). During the
+first online visit, its service worker downloads every simulation and runtime
+asset. Once the home page displays **Prête pour une utilisation hors ligne**, the installed app
+can be opened without a network connection.
+
+## Offline installation
+
+- Android, Windows, ChromeOS, and desktop browsers: use the **Install on this
+  device** button shown on the home page.
+- iPhone and iPad: open the Share menu in Safari, then select **Add to Home
+  Screen**.
+- Complete the first installation while online and wait for the offline-ready
+  confirmation before enabling airplane mode.
+
+The offline cache is versioned from the generated site contents. Returning
+online and reloading the application installs the latest deployed version and
+removes the previous cache.
+
 ## 📚 Included Examples
 
 - `apps/charts.py`: Interactive data visualization with Altair

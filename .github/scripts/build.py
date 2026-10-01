@@ -23,6 +23,8 @@ The exported files will be placed in the specified output directory (default: _s
 import subprocess
 import shutil
 import html
+import hashlib
+import json
 from typing import List, Union
 from pathlib import Path
 
@@ -66,6 +68,10 @@ APP_METADATA = {
 
 CATEGORY_ORDER = ["🏭 Procédés", "🧫 Bioprocédés", "🍵 Transferts"]
 
+PWA_NAME = "Les agités du réacteur"
+PWA_SHORT_NAME = "Les agités"
+MARIMO_EXPORT_VERSION = "0.25.0"
+
 
 def _export_html_wasm(notebook_path: Path, output_dir: Path, as_app: bool = False) -> bool:
     """Export a single marimo notebook to HTML/WebAssembly format.
@@ -87,7 +93,16 @@ def _export_html_wasm(notebook_path: Path, output_dir: Path, as_app: bool = Fals
     output_path: Path = notebook_path.with_suffix(".html")
 
     # Base command for marimo export
-    cmd: List[str] = ["uvx", "marimo", "export", "html-wasm", "--sandbox"]
+    cmd: List[str] = [
+        "uvx",
+        "--from",
+        f"marimo=={MARIMO_EXPORT_VERSION}",
+        "marimo",
+        "export",
+        "html-wasm",
+        "--sandbox",
+        "--offline",
+    ]
 
     # Configure export mode based on whether it's an app or a notebook
     if as_app:
@@ -477,10 +492,176 @@ def _inject_app_chrome(app_html_path: Path, display_name: str, category: str | N
     </script>
     """
 
-    html_text = html_text.replace("</head>", f"{chrome_styles}\n</head>", 1)
+    pwa_head = """
+    <meta name="theme-color" content="#1a3a52">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Les agités">
+    <link rel="manifest" href="../manifest.webmanifest">
+    <link rel="apple-touch-icon" href="../static/pwa-icon-192.png">
+    """
+
+    pwa_script = """
+    <script data-les-agites-pwa>
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => {
+          navigator.serviceWorker.register("../sw.js", { scope: "../" });
+        });
+      }
+    </script>
+    """
+
+    html_text = html_text.replace("</head>", f"{pwa_head}\n{chrome_styles}\n</head>", 1)
     html_text = html_text.replace("<body>", f"<body>\n{app_header}", 1)
-    html_text = html_text.replace("</body>", f"{scroll_script}\n{app_footer}\n</body>", 1)
+    html_text = html_text.replace("</body>", f"{scroll_script}\n{pwa_script}\n{app_footer}\n</body>", 1)
     app_html_path.write_text(html_text, encoding="utf-8")
+
+
+def _write_pwa_files(output_dir: Path) -> None:
+    """Create the install manifest, offline fallback, and versioned service worker."""
+    manifest = {
+        "name": PWA_NAME,
+        "short_name": PWA_SHORT_NAME,
+        "description": "Simulations interactives de génie des procédés utilisables hors ligne.",
+        "lang": "fr",
+        "id": "./",
+        "start_url": "./",
+        "scope": "./",
+        "display": "standalone",
+        "orientation": "any",
+        "background_color": "#f8fbfd",
+        "theme_color": "#1a3a52",
+        "icons": [
+            {
+                "src": "static/pwa-icon-192.png",
+                "sizes": "192x192",
+                "type": "image/png",
+                "purpose": "any maskable",
+            },
+            {
+                "src": "static/pwa-icon-512.png",
+                "sizes": "512x512",
+                "type": "image/png",
+                "purpose": "any maskable",
+            },
+        ],
+    }
+    (output_dir / "manifest.webmanifest").write_text(
+        json.dumps(manifest, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+
+    offline_html = """<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#1a3a52">
+  <title>Hors connexion — Les agités du réacteur</title>
+  <style>
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 24px;
+      box-sizing: border-box; font-family: "Segoe UI", Arial, sans-serif; color: #151515;
+      background: linear-gradient(180deg, #f8fbfd, #eef5f9); }
+    main { max-width: 620px; padding: 32px; background: white; border-radius: 8px;
+      box-shadow: 0 12px 32px rgba(26,58,82,.14); }
+    h1 { color: #1a3a52; }
+    a { display: inline-block; margin-top: 12px; padding: 10px 16px; color: white;
+      background: #2d5a7b; border-radius: 4px; text-decoration: none; font-weight: 700; }
+  </style>
+</head>
+<body><main><h1>Vous êtes hors connexion</h1>
+<p>Cette page n’a pas encore été enregistrée sur cet appareil. Revenez à l’accueil pour utiliser les simulations installées.</p>
+<a href="./index.html">Revenir à l’accueil</a></main></body>
+</html>
+"""
+    (output_dir / "offline.html").write_text(offline_html, encoding="utf-8")
+
+    files_to_cache = sorted(
+        path.relative_to(output_dir).as_posix()
+        for path in output_dir.rglob("*")
+        if path.is_file() and path.name != "sw.js"
+    )
+
+    digest = hashlib.sha256()
+    for relative_path in files_to_cache:
+        digest.update(relative_path.encode("utf-8"))
+        digest.update((output_dir / relative_path).read_bytes())
+    cache_version = digest.hexdigest()[:16]
+
+    precache_urls = ["./", *[f"./{path}" for path in files_to_cache]]
+    service_worker = f"""const CACHE_NAME = "les-agites-{cache_version}";
+const PRECACHE_URLS = {json.dumps(precache_urls, ensure_ascii=False, indent=2)};
+const OFFLINE_URL = new URL("./offline.html", self.registration.scope).href;
+
+self.addEventListener("install", (event) => {{
+  event.waitUntil((async () => {{
+    const cache = await caches.open(CACHE_NAME);
+    const batchSize = 12;
+    for (let index = 0; index < PRECACHE_URLS.length; index += batchSize) {{
+      const batch = PRECACHE_URLS.slice(index, index + batchSize);
+      await Promise.all(batch.map(async (relativeUrl) => {{
+        const url = new URL(relativeUrl, self.registration.scope);
+        const response = await fetch(url, {{ cache: "reload" }});
+        if (!response.ok) {{
+          throw new Error(`Unable to cache ${{url}}: ${{response.status}}`);
+        }}
+        await cache.put(url, response);
+      }}));
+    }}
+    await self.skipWaiting();
+  }})());
+}});
+
+self.addEventListener("activate", (event) => {{
+  event.waitUntil((async () => {{
+    const cacheNames = await caches.keys();
+    await Promise.all(
+      cacheNames
+        .filter((name) => name.startsWith("les-agites-") && name !== CACHE_NAME)
+        .map((name) => caches.delete(name))
+    );
+    await self.clients.claim();
+  }})());
+}});
+
+self.addEventListener("fetch", (event) => {{
+  if (event.request.method !== "GET") return;
+
+  const requestUrl = new URL(event.request.url);
+  if (requestUrl.origin !== self.location.origin) return;
+
+  if (event.request.mode === "navigate") {{
+    event.respondWith((async () => {{
+      try {{
+        const response = await fetch(event.request);
+        if (response.ok) {{
+          const cache = await caches.open(CACHE_NAME);
+          await cache.put(event.request, response.clone());
+        }}
+        return response;
+      }} catch {{
+        return (await caches.match(event.request))
+          || (await caches.match(new URL("./index.html", self.registration.scope)))
+          || (await caches.match(OFFLINE_URL));
+      }}
+    }})());
+    return;
+  }}
+
+  event.respondWith((async () => {{
+    const cached = await caches.match(event.request);
+    if (cached) return cached;
+    const response = await fetch(event.request);
+    if (response.ok) {{
+      const cache = await caches.open(CACHE_NAME);
+      cache.put(event.request, response.clone());
+    }}
+    return response;
+  }})());
+}});
+"""
+    (output_dir / "sw.js").write_text(service_worker, encoding="utf-8")
+    logger.info(f"Generated installable offline PWA with cache {cache_version}")
 
 
 def _format_display_name(path: Path) -> str:
@@ -546,8 +727,10 @@ def _export(folder: Path, output_dir: Path, as_app: bool=False) -> List[dict]:
 
     # For each successfully exported notebook, add its data to the notebook_data list
     notebook_data = []
+    failed_notebooks = []
     for nb in notebooks:
         if not _export_html_wasm(nb, output_dir, as_app=as_app):
+            failed_notebooks.append(nb)
             continue
 
         key = nb.stem.casefold()
@@ -566,6 +749,10 @@ def _export(folder: Path, output_dir: Path, as_app: bool=False) -> List[dict]:
                 display_name=display_name,
                 category=metadata.get("category"),
             )
+
+    if failed_notebooks:
+        failed_list = ", ".join(str(path) for path in failed_notebooks)
+        raise RuntimeError(f"Failed to export: {failed_list}")
 
     logger.info(f"Successfully exported {len(notebook_data)} out of {len(notebooks)} files from {folder}")
     return notebook_data
@@ -622,6 +809,8 @@ def main(
         app_groups=app_groups,
         template_file=template_file,
     )
+
+    _write_pwa_files(output_dir)
 
     logger.info(f"Build completed successfully. Output directory: {output_dir}")
 

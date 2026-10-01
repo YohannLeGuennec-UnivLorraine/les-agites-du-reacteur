@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 430" role="img" aria-labelledby="title desc">
+  <title id="title">Courbe de Monod</title>
+  <desc id="desc">La vitesse de croissance augmente avec la concentration en substrat puis atteint un plateau.</desc>
+  <rect width="760" height="430" rx="18" fill="#f8fbfd"/>
+  <line x1="92" y1="350" x2="700" y2="350" stroke="#1a3a52" stroke-width="5"/>
+  <line x1="92" y1="350" x2="92" y2="55" stroke="#1a3a52" stroke-width="5"/>
+  <path d="M92 350 C150 252 210 185 292 143 C390 92 510 76 690 72" fill="none" stroke="#2f855a" stroke-width="9" stroke-linecap="round"/>
+  <line x1="92" y1="72" x2="690" y2="72" stroke="#d97706" stroke-width="4" stroke-dasharray="12 10"/>
+  <line x1="92" y1="211" x2="252" y2="211" stroke="#64748b" stroke-width="3" stroke-dasharray="8 8"/>
+  <line x1="252" y1="350" x2="252" y2="211" stroke="#64748b" stroke-width="3" stroke-dasharray="8 8"/>
+  <circle cx="252" cy="211" r="8" fill="#1a3a52"/>
+  <g fill="#1a3a52" font-family="Segoe UI, Arial, sans-serif" font-size="24">
+    <text x="650" y="395">[S]</text>
+    <text x="30" y="78">μ</text>
+    <text x="605" y="58" fill="#b45309">μ max</text>
+    <text x="225" y="388">K<tspan baseline-shift="sub" font-size="17">S</tspan></text>
+    <text x="18" y="219">½ μ max</text>
+  </g>
+  <text x="380" y="410" text-anchor="middle" fill="#475569" font-family="Segoe UI, Arial, sans-serif" font-size="19">Concentration en substrat limitant</text>
+</svg>
