@@ -249,6 +249,38 @@
       font-weight: 700;
     }
 
+    .install-progress {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .install-progress-track {
+      flex: 1;
+      height: 12px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.7);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .install-progress-bar {
+      width: 0;
+      height: 100%;
+      border-radius: inherit;
+      background: #ffffff;
+      transition: width 180ms ease;
+    }
+
+    .install-progress-value {
+      min-width: 3.5rem;
+      color: #ffffff;
+      font-variant-numeric: tabular-nums;
+      font-weight: 800;
+      text-align: right;
+    }
+
     [hidden] {
       display: none !important;
     }
@@ -326,6 +358,20 @@
       <button type="button" id="pwa-install" class="install-action" hidden>Installer sur cet appareil</button>
       <p id="pwa-ios-help" hidden>Sur iPhone ou iPad : ouvrez le menu <strong>Partager</strong>, puis choisissez <strong>Sur l’écran d’accueil</strong>.</p>
       <p id="pwa-status" class="install-status" role="status" aria-live="polite">Préparation du mode hors ligne…</p>
+      <div id="pwa-progress" class="install-progress" hidden>
+        <div
+          id="pwa-progress-track"
+          class="install-progress-track"
+          role="progressbar"
+          aria-labelledby="pwa-status pwa-progress-value"
+          aria-valuemin="0"
+          aria-valuemax="100"
+          aria-valuenow="0"
+        >
+          <div id="pwa-progress-bar" class="install-progress-bar"></div>
+        </div>
+        <span id="pwa-progress-value" class="install-progress-value">0 %</span>
+      </div>
     </section>
 
     {% if app_groups %}
@@ -363,7 +409,36 @@
       const installButton = document.getElementById("pwa-install");
       const iosHelp = document.getElementById("pwa-ios-help");
       const status = document.getElementById("pwa-status");
+      const progress = document.getElementById("pwa-progress");
+      const progressTrack = document.getElementById("pwa-progress-track");
+      const progressBar = document.getElementById("pwa-progress-bar");
+      const progressValue = document.getElementById("pwa-progress-value");
       let installPrompt = null;
+
+      const setDownloadProgress = (completed, total) => {
+        const percentage = total > 0
+          ? Math.min(100, Math.round((completed / total) * 100))
+          : 0;
+        progress.hidden = false;
+        progressTrack.setAttribute("aria-valuenow", String(percentage));
+        progressBar.style.width = `${percentage}%`;
+        progressValue.textContent = `${percentage} %`;
+        status.textContent = "Téléchargement des simulations pour le mode hors ligne…";
+      };
+
+      const markOfflineReady = () => {
+        if (!progress.hidden) {
+          progressTrack.setAttribute("aria-valuenow", "100");
+          progressBar.style.width = "100%";
+          progressValue.textContent = "100 %";
+          window.setTimeout(() => {
+            progress.hidden = true;
+          }, 700);
+        }
+        status.textContent = navigator.onLine
+          ? "Prête pour une utilisation hors ligne."
+          : "Mode hors ligne actif.";
+      };
 
       const isStandalone = window.matchMedia("(display-mode: standalone)").matches
         || window.navigator.standalone === true;
@@ -399,18 +474,26 @@
         return;
       }
 
+      navigator.serviceWorker.addEventListener("message", (event) => {
+        if (event.data?.type !== "PRECACHE_PROGRESS") return;
+        setDownloadProgress(event.data.completed, event.data.total);
+      });
+
+      navigator.serviceWorker.addEventListener("controllerchange", markOfflineReady);
+
       window.addEventListener("load", async () => {
         try {
           const registration = await navigator.serviceWorker.register("sw.js", { scope: "./" });
           if (registration.installing) {
-            status.textContent = "Téléchargement des simulations pour le mode hors ligne…";
+            setDownloadProgress(0, 1);
           }
           await navigator.serviceWorker.ready;
-          status.textContent = navigator.onLine
-            ? "Prête pour une utilisation hors ligne."
-            : "Mode hors ligne actif.";
+          if (!registration.installing) {
+            markOfflineReady();
+          }
         } catch (error) {
           console.error("PWA registration failed", error);
+          progress.hidden = true;
           status.textContent = "Le mode hors ligne n’a pas pu être préparé. Rechargez la page avec une connexion Internet.";
         }
       });

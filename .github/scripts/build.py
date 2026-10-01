@@ -593,10 +593,26 @@ def _write_pwa_files(output_dir: Path) -> None:
 const PRECACHE_URLS = {json.dumps(precache_urls, ensure_ascii=False, indent=2)};
 const OFFLINE_URL = new URL("./offline.html", self.registration.scope).href;
 
+async function reportPrecacheProgress(completed, total) {{
+  const windows = await self.clients.matchAll({{
+    type: "window",
+    includeUncontrolled: true,
+  }});
+  windows.forEach((client) => {{
+    client.postMessage({{
+      type: "PRECACHE_PROGRESS",
+      completed,
+      total,
+    }});
+  }});
+}}
+
 self.addEventListener("install", (event) => {{
   event.waitUntil((async () => {{
     const cache = await caches.open(CACHE_NAME);
     const batchSize = 12;
+    let completed = 0;
+    await reportPrecacheProgress(completed, PRECACHE_URLS.length);
     for (let index = 0; index < PRECACHE_URLS.length; index += batchSize) {{
       const batch = PRECACHE_URLS.slice(index, index + batchSize);
       await Promise.all(batch.map(async (relativeUrl) => {{
@@ -607,6 +623,8 @@ self.addEventListener("install", (event) => {{
         }}
         await cache.put(url, response);
       }}));
+      completed += batch.length;
+      await reportPrecacheProgress(completed, PRECACHE_URLS.length);
     }}
     await self.skipWaiting();
   }})());
