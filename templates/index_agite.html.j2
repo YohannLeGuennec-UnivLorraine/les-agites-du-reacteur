@@ -414,6 +414,8 @@
       const progressBar = document.getElementById("pwa-progress-bar");
       const progressValue = document.getElementById("pwa-progress-value");
       let installPrompt = null;
+      let serviceWorkerRegistration = null;
+      const watchedWorkers = new WeakSet();
 
       const setDownloadProgress = (completed, total) => {
         const percentage = total > 0
@@ -438,6 +440,27 @@
         status.textContent = navigator.onLine
           ? "Prête pour une utilisation hors ligne."
           : "Mode hors ligne actif.";
+      };
+
+      const requestOfflineStatus = () => {
+        const worker = serviceWorkerRegistration?.active
+          || navigator.serviceWorker.controller;
+        worker?.postMessage({ type: "CHECK_OFFLINE_READY" });
+      };
+
+      const watchInstallingWorker = (worker) => {
+        if (!worker || watchedWorkers.has(worker)) return;
+        watchedWorkers.add(worker);
+        setDownloadProgress(0, 1);
+        worker.addEventListener("statechange", () => {
+          if (worker.state === "activated") {
+            requestOfflineStatus();
+          }
+          if (worker.state === "redundant") {
+            progress.hidden = true;
+            status.textContent = "Le téléchargement hors ligne a échoué. Vérifiez la connexion puis rechargez la page.";
+          }
+        });
       };
 
       const isStandalone = window.matchMedia("(display-mode: standalone)").matches
@@ -483,20 +506,30 @@
           status.textContent = "Le téléchargement hors ligne a échoué. Vérifiez la connexion puis rechargez la page.";
           console.error("PWA precache failed", event.data.message);
         }
+        if (event.data?.type === "OFFLINE_READY") {
+          if (event.data.ready) {
+            markOfflineReady();
+          } else {
+            setDownloadProgress(event.data.completed, event.data.total);
+          }
+        }
       });
 
-      navigator.serviceWorker.addEventListener("controllerchange", markOfflineReady);
+      navigator.serviceWorker.addEventListener("controllerchange", requestOfflineStatus);
 
       window.addEventListener("load", async () => {
         try {
           const registration = await navigator.serviceWorker.register("sw.js", { scope: "./" });
-          if (registration.installing) {
-            setDownloadProgress(0, 1);
+          serviceWorkerRegistration = registration;
+          registration.addEventListener("updatefound", () => {
+            watchInstallingWorker(registration.installing);
+          });
+          watchInstallingWorker(registration.installing);
+          if (navigator.onLine) {
+            await registration.update();
           }
           await navigator.serviceWorker.ready;
-          if (!registration.installing) {
-            markOfflineReady();
-          }
+          requestOfflineStatus();
         } catch (error) {
           console.error("PWA registration failed", error);
           progress.hidden = true;

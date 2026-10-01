@@ -662,6 +662,26 @@ self.addEventListener("activate", (event) => {{
   }})());
 }});
 
+self.addEventListener("message", (event) => {{
+  if (event.data?.type !== "CHECK_OFFLINE_READY") return;
+
+  event.waitUntil((async () => {{
+    const cache = await caches.open(CACHE_NAME);
+    const cachedResponses = await Promise.all(
+      PRECACHE_URLS.map((relativeUrl) =>
+        cache.match(new URL(relativeUrl, self.registration.scope))
+      )
+    );
+    const completed = cachedResponses.filter(Boolean).length;
+    event.source?.postMessage({{
+      type: "OFFLINE_READY",
+      ready: completed === PRECACHE_URLS.length,
+      completed,
+      total: PRECACHE_URLS.length,
+    }});
+  }})());
+}});
+
 self.addEventListener("fetch", (event) => {{
   if (event.request.method !== "GET") return;
 
