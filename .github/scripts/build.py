@@ -579,7 +579,9 @@ def _write_pwa_files(output_dir: Path) -> None:
     files_to_cache = sorted(
         path.relative_to(output_dir).as_posix()
         for path in output_dir.rglob("*")
-        if path.is_file() and path.name != "sw.js"
+        if path.is_file()
+        and path.name != "sw.js"
+        and not path.name.startswith(".")
     )
 
     digest = hashlib.sha256()
@@ -607,26 +609,44 @@ async function reportPrecacheProgress(completed, total) {{
   }});
 }}
 
+async function reportPrecacheError(message) {{
+  const windows = await self.clients.matchAll({{
+    type: "window",
+    includeUncontrolled: true,
+  }});
+  windows.forEach((client) => {{
+    client.postMessage({{
+      type: "PRECACHE_ERROR",
+      message,
+    }});
+  }});
+}}
+
 self.addEventListener("install", (event) => {{
   event.waitUntil((async () => {{
-    const cache = await caches.open(CACHE_NAME);
-    const batchSize = 12;
-    let completed = 0;
-    await reportPrecacheProgress(completed, PRECACHE_URLS.length);
-    for (let index = 0; index < PRECACHE_URLS.length; index += batchSize) {{
-      const batch = PRECACHE_URLS.slice(index, index + batchSize);
-      await Promise.all(batch.map(async (relativeUrl) => {{
-        const url = new URL(relativeUrl, self.registration.scope);
-        const response = await fetch(url, {{ cache: "reload" }});
-        if (!response.ok) {{
-          throw new Error(`Unable to cache ${{url}}: ${{response.status}}`);
-        }}
-        await cache.put(url, response);
-      }}));
-      completed += batch.length;
+    try {{
+      const cache = await caches.open(CACHE_NAME);
+      const batchSize = 12;
+      let completed = 0;
       await reportPrecacheProgress(completed, PRECACHE_URLS.length);
+      for (let index = 0; index < PRECACHE_URLS.length; index += batchSize) {{
+        const batch = PRECACHE_URLS.slice(index, index + batchSize);
+        await Promise.all(batch.map(async (relativeUrl) => {{
+          const url = new URL(relativeUrl, self.registration.scope);
+          const response = await fetch(url, {{ cache: "reload" }});
+          if (!response.ok) {{
+            throw new Error(`Unable to cache ${{url}}: ${{response.status}}`);
+          }}
+          await cache.put(url, response);
+        }}));
+        completed += batch.length;
+        await reportPrecacheProgress(completed, PRECACHE_URLS.length);
+      }}
+      await self.skipWaiting();
+    }} catch (error) {{
+      await reportPrecacheError(error instanceof Error ? error.message : String(error));
+      throw error;
     }}
-    await self.skipWaiting();
   }})());
 }});
 

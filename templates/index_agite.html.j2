@@ -475,8 +475,14 @@
       }
 
       navigator.serviceWorker.addEventListener("message", (event) => {
-        if (event.data?.type !== "PRECACHE_PROGRESS") return;
-        setDownloadProgress(event.data.completed, event.data.total);
+        if (event.data?.type === "PRECACHE_PROGRESS") {
+          setDownloadProgress(event.data.completed, event.data.total);
+        }
+        if (event.data?.type === "PRECACHE_ERROR") {
+          progress.hidden = true;
+          status.textContent = "Le téléchargement hors ligne a échoué. Vérifiez la connexion puis rechargez la page.";
+          console.error("PWA precache failed", event.data.message);
+        }
       });
 
       navigator.serviceWorker.addEventListener("controllerchange", markOfflineReady);
