@@ -352,12 +352,11 @@
       <p>Les simulations sont pensées pour relier les équations, les phénomènes physiques et les applications concrètes enseignées à l'ENSIC. Exécutez-les en temps réel, comparez les résultats et découvrez comment les outils numériques facilitent la compréhension et la résolution de problèmes en génie des procédés.</p>
     </section>
 
-    <section class="install-panel" aria-labelledby="install-title">
+    <section id="pwa-install-panel" class="install-panel" aria-labelledby="install-title" hidden>
       <h2 id="install-title">Installer l’application</h2>
-      <p>Installez une fois l’application avec une connexion Internet, puis utilisez toutes les simulations sans réseau.</p>
-      <button type="button" id="pwa-install" class="install-action" hidden>Installer sur cet appareil</button>
-      <p id="pwa-ios-help" hidden>Sur iPhone ou iPad : ouvrez le menu <strong>Partager</strong>, puis choisissez <strong>Sur l’écran d’accueil</strong>.</p>
-      <p id="pwa-status" class="install-status" role="status" aria-live="polite">Préparation du mode hors ligne…</p>
+      <p>Sur Chrome, téléchargez puis installez l’application pour utiliser toutes les simulations sans réseau.</p>
+      <button type="button" id="pwa-install" class="install-action">Télécharger pour une utilisation hors ligne</button>
+      <p id="pwa-status" class="install-status" role="status" aria-live="polite">Aucun téléchargement ne démarrera avant votre clic.</p>
       <div id="pwa-progress" class="install-progress" hidden>
         <div
           id="pwa-progress-track"
@@ -406,8 +405,8 @@
   </footer>
   <script>
     (() => {
+      const installPanel = document.getElementById("pwa-install-panel");
       const installButton = document.getElementById("pwa-install");
-      const iosHelp = document.getElementById("pwa-ios-help");
       const status = document.getElementById("pwa-status");
       const progress = document.getElementById("pwa-progress");
       const progressTrack = document.getElementById("pwa-progress-track");
@@ -415,7 +414,24 @@
       const progressValue = document.getElementById("pwa-progress-value");
       let installPrompt = null;
       let serviceWorkerRegistration = null;
+      let offlineReady = false;
+      let downloadStarted = false;
       const watchedWorkers = new WeakSet();
+
+      const userAgent = navigator.userAgent;
+      const isGoogleChrome = navigator.userAgentData?.brands?.some(
+        (brand) => brand.brand === "Google Chrome"
+      ) || (
+        navigator.vendor === "Google Inc."
+        && /Chrome\//.test(userAgent)
+        && !/Edg|OPR|SamsungBrowser/.test(userAgent)
+      );
+
+      if (!isGoogleChrome || !("serviceWorker" in navigator)) {
+        return;
+      }
+
+      installPanel.hidden = false;
 
       const setDownloadProgress = (completed, total) => {
         const percentage = total > 0
@@ -429,6 +445,7 @@
       };
 
       const markOfflineReady = () => {
+        offlineReady = true;
         if (!progress.hidden) {
           progressTrack.setAttribute("aria-valuenow", "100");
           progressBar.style.width = "100%";
@@ -440,6 +457,15 @@
         status.textContent = navigator.onLine
           ? "Prête pour une utilisation hors ligne."
           : "Mode hors ligne actif.";
+
+        if (!isStandalone) {
+          installButton.hidden = false;
+          installButton.textContent = "Installer l’application";
+          installButton.disabled = !installPrompt;
+          status.textContent = installPrompt
+            ? "Téléchargement terminé. Cliquez sur Installer l’application."
+            : "Téléchargement terminé. Chrome prépare l’installation…";
+        }
       };
 
       const requestOfflineStatus = () => {
@@ -465,59 +491,37 @@
 
       const isStandalone = window.matchMedia("(display-mode: standalone)").matches
         || window.navigator.standalone === true;
-      const isAppleMobile = /iphone|ipad|ipod/i.test(navigator.userAgent);
 
       if (isStandalone) {
         status.textContent = "Application installée. Le mode hors ligne est disponible.";
-      } else if (isAppleMobile) {
-        iosHelp.hidden = false;
+        installButton.hidden = true;
       }
 
       window.addEventListener("beforeinstallprompt", (event) => {
         event.preventDefault();
         installPrompt = event;
-        installButton.hidden = false;
+        if (offlineReady) {
+          installButton.disabled = false;
+          status.textContent = "Téléchargement terminé. Cliquez sur Installer l’application.";
+        }
       });
 
       installButton.addEventListener("click", async () => {
-        if (!installPrompt) return;
-        await installPrompt.prompt();
-        await installPrompt.userChoice;
-        installPrompt = null;
-        installButton.hidden = true;
-      });
-
-      window.addEventListener("appinstalled", () => {
-        status.textContent = "Application installée. Le mode hors ligne est disponible.";
-        installButton.hidden = true;
-      });
-
-      if (!("serviceWorker" in navigator)) {
-        status.textContent = "Ce navigateur ne permet pas l’installation hors ligne.";
-        return;
-      }
-
-      navigator.serviceWorker.addEventListener("message", (event) => {
-        if (event.data?.type === "PRECACHE_PROGRESS") {
-          setDownloadProgress(event.data.completed, event.data.total);
+        if (offlineReady) {
+          if (!installPrompt) return;
+          await installPrompt.prompt();
+          await installPrompt.userChoice;
+          installPrompt = null;
+          installButton.hidden = true;
+          return;
         }
-        if (event.data?.type === "PRECACHE_ERROR") {
-          progress.hidden = true;
-          status.textContent = "Le téléchargement hors ligne a échoué. Vérifiez la connexion puis rechargez la page.";
-          console.error("PWA precache failed", event.data.message);
-        }
-        if (event.data?.type === "OFFLINE_READY") {
-          if (event.data.ready) {
-            markOfflineReady();
-          } else {
-            setDownloadProgress(event.data.completed, event.data.total);
-          }
-        }
-      });
 
-      navigator.serviceWorker.addEventListener("controllerchange", requestOfflineStatus);
+        if (downloadStarted) return;
+        downloadStarted = true;
+        installButton.disabled = true;
+        installButton.textContent = "Téléchargement en cours…";
+        status.textContent = "Préparation du mode hors ligne…";
 
-      window.addEventListener("load", async () => {
         try {
           const registration = await navigator.serviceWorker.register("sw.js", { scope: "./" });
           serviceWorkerRegistration = registration;
@@ -533,15 +537,50 @@
         } catch (error) {
           console.error("PWA registration failed", error);
           progress.hidden = true;
-          status.textContent = "Le mode hors ligne n’a pas pu être préparé. Rechargez la page avec une connexion Internet.";
+          downloadStarted = false;
+          installButton.disabled = false;
+          installButton.textContent = "Réessayer le téléchargement";
+          status.textContent = "Le mode hors ligne n’a pas pu être préparé. Vérifiez la connexion puis réessayez.";
         }
       });
 
+      window.addEventListener("appinstalled", () => {
+        status.textContent = "Application installée. Le mode hors ligne est disponible.";
+        installButton.hidden = true;
+      });
+
+      navigator.serviceWorker.addEventListener("message", (event) => {
+        if (event.data?.type === "PRECACHE_PROGRESS") {
+          setDownloadProgress(event.data.completed, event.data.total);
+        }
+        if (event.data?.type === "PRECACHE_ERROR") {
+          progress.hidden = true;
+          downloadStarted = false;
+          installButton.disabled = false;
+          installButton.textContent = "Réessayer le téléchargement";
+          status.textContent = "Le téléchargement hors ligne a échoué. Vérifiez la connexion puis rechargez la page.";
+          console.error("PWA precache failed", event.data.message);
+        }
+        if (event.data?.type === "OFFLINE_READY") {
+          if (event.data.ready) {
+            markOfflineReady();
+          } else {
+            setDownloadProgress(event.data.completed, event.data.total);
+          }
+        }
+      });
+
+      navigator.serviceWorker.addEventListener("controllerchange", requestOfflineStatus);
+
       window.addEventListener("offline", () => {
-        status.textContent = "Mode hors ligne actif.";
+        if (offlineReady) {
+          status.textContent = "Mode hors ligne actif.";
+        }
       });
       window.addEventListener("online", () => {
-        status.textContent = "Connexion rétablie. Vérification des mises à jour…";
+        if (offlineReady) {
+          status.textContent = "Connexion rétablie. L’application reste disponible hors ligne.";
+        }
       });
     })();
   </script>

@@ -501,19 +501,9 @@ def _inject_app_chrome(app_html_path: Path, display_name: str, category: str | N
     <link rel="apple-touch-icon" href="../static/pwa-icon-192.png">
     """
 
-    pwa_script = """
-    <script data-les-agites-pwa>
-      if ("serviceWorker" in navigator) {
-        window.addEventListener("load", () => {
-          navigator.serviceWorker.register("../sw.js", { scope: "../" });
-        });
-      }
-    </script>
-    """
-
     html_text = html_text.replace("</head>", f"{pwa_head}\n{chrome_styles}\n</head>", 1)
     html_text = html_text.replace("<body>", f"<body>\n{app_header}", 1)
-    html_text = html_text.replace("</body>", f"{scroll_script}\n{pwa_script}\n{app_footer}\n</body>", 1)
+    html_text = html_text.replace("</body>", f"{scroll_script}\n{app_footer}\n</body>", 1)
     app_html_path.write_text(html_text, encoding="utf-8")
 
 
