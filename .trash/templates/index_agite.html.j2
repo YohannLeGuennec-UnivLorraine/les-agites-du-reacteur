@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Les agités du réacteur</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Arial, sans-serif;
+      line-height: 1.55;
+      color: #151515;
+      background:
+        linear-gradient(180deg, #f8fbfd 0%, #eef5f9 48%, #f8fbfd 100%);
+    }
+
+    a {
+      color: inherit;
+    }
+
+    .container {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+
+    header {
+      padding: 28px 0 22px;
+      background: transparent;
+      border-bottom: 0;
+    }
+
+    .logos {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 28px;
+      margin-bottom: 22px;
+      flex-wrap: wrap;
+    }
+
+    .logos img {
+      display: block;
+      max-width: min(280px, 42vw);
+      max-height: 82px;
+      object-fit: contain;
+    }
+
+    .banner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      padding: 18px 24px;
+      background: linear-gradient(135deg, #1a3a52 0%, #2d5a7b 100%);
+      color: #ffffff;
+      border-radius: 3px;
+      box-shadow: 0 8px 22px rgba(26, 58, 82, 0.14);
+    }
+
+    .banner-brand {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      min-width: 0;
+    }
+
+    .site-logo {
+      display: block;
+      width: 78px;
+      height: 58px;
+      object-fit: contain;
+      filter: brightness(0) invert(1);
+      flex: 0 0 auto;
+    }
+
+    .banner h1 {
+      margin: 0;
+      font-size: clamp(1.45rem, 4vw, 2rem);
+      line-height: 1.05;
+      text-transform: uppercase;
+      letter-spacing: 0;
+      font-weight: 800;
+    }
+
+    nav {
+      display: flex;
+      gap: 18px;
+      flex-wrap: wrap;
+      font-weight: 700;
+    }
+
+    nav a {
+      text-decoration: none;
+      border-bottom: 2px solid transparent;
+    }
+
+    nav a:hover,
+    nav a:focus-visible {
+      border-bottom-color: #ffffff;
+      outline: none;
+    }
+
+    main {
+      padding: 36px 0 48px;
+    }
+
+    section {
+      margin-bottom: 42px;
+    }
+
+    .intro {
+      background: rgba(255, 255, 255, 0.78);
+      border: 0;
+      border-radius: 4px;
+      padding: 28px;
+    }
+
+    h2 {
+      margin: 0 0 14px;
+      font-size: 1.65rem;
+      line-height: 1.15;
+    }
+
+    .intro p,
+    .section-description {
+      margin: 0;
+      color: #4b4b4b;
+    }
+
+    .intro p + p {
+      margin-top: 12px;
+    }
+
+    .theme {
+      margin-top: 26px;
+    }
+
+    .theme-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 0 0 14px;
+      font-size: 1.35rem;
+    }
+
+    .theme-title::after {
+      content: "";
+      height: 1px;
+      flex: 1;
+      background: #d8cec6;
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .card {
+      display: flex;
+      flex-direction: column;
+      height: 124px;
+      background: #ffffff;
+      border: 1px solid #e5ded8;
+      border-top: 4px solid #2d5a7b;
+      border-radius: 4px;
+      padding: 18px;
+    }
+
+    .card h4 {
+      margin: 0 0 8px;
+      font-size: 1.05rem;
+      line-height: 1.25;
+    }
+
+    .card-link {
+      display: inline-block;
+      width: fit-content;
+      margin-top: auto;
+      padding: 8px 14px;
+      background: #2d5a7b;
+      color: #ffffff;
+      border-radius: 3px;
+      text-decoration: none;
+      font-weight: 700;
+    }
+
+    .card-link:hover,
+    .card-link:focus-visible {
+      background: #1a3a52;
+      outline: none;
+    }
+
+    .contact {
+      background: #ffffff;
+      border: 1px solid #e5ded8;
+      border-radius: 4px;
+      padding: 24px;
+    }
+
+    .contact .card-link {
+      margin-top: 16px;
+    }
+
+    footer {
+      padding: 24px 0;
+      color: #606060;
+      text-align: center;
+      border-top: 1px solid #e5ded8;
+      background: rgba(255, 255, 255, 0.55);
+      font-size: 0.92rem;
+    }
+
+    @media (max-width: 760px) {
+      .banner {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .banner-brand {
+        align-items: flex-start;
+      }
+
+      nav {
+        gap: 12px;
+      }
+
+      .cards {
+        grid-template-columns: 1fr;
+      }
+
+      .card {
+        height: 116px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container">
+      <div class="logos" aria-label="Logos ENSIC et Université de Lorraine">
+        <a href="https://www.ensic.univ-lorraine.fr/fr" target="_blank" rel="noopener noreferrer" aria-label="Site de l'ENSIC">
+          <img src="static/logo-ensic.png" alt="ENSIC">
+        </a>
+        <img src="static/logo-universite-de-lorraine.png" alt="Université de Lorraine">
+      </div>
+      <div class="banner">
+        <div class="banner-brand">
+          <img class="site-logo" src="static/logo.png" alt="Les agités du réacteur">
+          <h1>Les agités du réacteur</h1>
+        </div>
+        <nav aria-label="Navigation principale">
+          <a href="#apropos">À propos</a>
+          <a href="#apps">Applications</a>
+          <a href="#contact">Contact</a>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <section id="apropos" class="intro">
+      <h2>Comprendre le génie des procédés grâce aux simulations</h2>
+      <p>Cette plateforme présente des notebooks interactifs et des applications de simulation utilisés en génie chimique. Que vous soyez en classes préparatoires, en BUT ou simplement curieux de découvrir les études d'ingénierie, ces ressources permettent d'explorer des modèles simples, de modifier leurs paramètres et de visualiser immédiatement leurs effets sur les grandeurs du procédé.</p>
+      <p>Les simulations sont pensées pour relier les équations, les phénomènes physiques et les applications concrètes enseignées à l'ENSIC. Exécutez-les en temps réel, comparez les résultats et découvrez comment les outils numériques facilitent la compréhension et la résolution de problèmes en génie des procédés.</p>
+    </section>
+
+    {% if app_groups %}
+    <section id="apps">
+      {% for group in app_groups %}
+      <div class="theme">
+        <h3 class="theme-title">{{ group.title }}</h3>
+        <div class="cards">
+          {% for app in group.apps %}
+          <article class="card">
+            <h4>{{ app.display_name }}</h4>
+            <a href="{{ app.html_path }}" class="card-link">Ouvrir l'application</a>
+          </article>
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+    </section>
+    {% endif %}
+
+    <section id="contact" class="contact">
+      <h2>📨 Contact</h2>
+      <p>Pour proposer un thème, signaler une difficulté ou transmettre un retour, vous pouvez écrire directement à Yohann Le Guennec.</p>
+      <a href="mailto:yohann.le-guennec@univ-lorraine.fr?subject=Les%20agit%C3%A9s%20du%20r%C3%A9acteur%20-%20retour" class="card-link" target="_blank" rel="noopener noreferrer">Créer un email</a>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container">
+      Projet conduit par Yohann Le Guennec. Il existe grâce aux contenus proposés par les étudiants Imran Baraka, Alex Jacquey, Maxime Lin et Nitish Pierre.
+    </div>
+  </footer>
+</body>
+</html>
